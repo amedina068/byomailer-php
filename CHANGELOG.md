@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - Unreleased
+
+### Added
+
+- `contacts()->subscribe()` subscribes a contact again after an admin or the API unsubscribed it.
+- `ValidationException::has()` tells if the instance refused one field. Use it to read why `subscribe()` failed: `contact` or `email`.
+- `SequenceSummary`, the type of each item of `sequences()->list()` and `sequences()->all()`.
+- `Byomailer\Enums\SequenceStatus`, with the cases `Draft`, `Live` and `Paused`.
+
+### Changed
+
+- `sequences()->list()` and `sequences()->all()` return `SequenceSummary` items in place of `Sequence` items.
+- The `status` filter of `sequences()->list()` and `sequences()->all()` is a `SequenceStatus`, not a string.
+- `Sequence` and `SequenceSummary` need `steps_count`, `contacts_count`, `completed_count` and `active_count`. The instance now sends the real values.
+- The docs of `contacts()->update()` say that an update never changes the subscription.
+- The docs of `contacts()->addToList()` say that the instance subscribes again a contact that an admin unsubscribed. For an opt-in list, only a contact that is new on the list gets the opt-in email.
+- The docs of `newsletters()->chooseWinner()` say that the instance sends no more email. The `newsletter.sent` webhook event comes one time.
+
+### Removed
+
+- `sequences()->exportStepMails()` does not send the `current_only` filter. The instance deprecated this filter and ignores it.
+
 ## [0.1.0] - Unreleased
 
 ### Added

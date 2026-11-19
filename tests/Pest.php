@@ -226,6 +226,24 @@ function stepPayload(array $overrides = []): array
  * @param  array<string, mixed>  $overrides
  * @return array<string, mixed>
  */
+function sequenceSummaryPayload(array $overrides = []): array
+{
+    return $overrides + [
+        'id' => 3,
+        'name' => 'Welcome',
+        'status' => 'live',
+        'steps_count' => 4,
+        'contacts_count' => 20,
+        'completed_count' => 5,
+        'active_count' => 15,
+        'project_ids' => [1],
+    ];
+}
+
+/**
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
 function endpointPayload(array $overrides = []): array
 {
     return $overrides + [

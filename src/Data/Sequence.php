@@ -7,16 +7,15 @@ namespace Byomailer\Data;
 use DateTimeImmutable;
 
 /**
- * An automated series of emails.
- *
- * The list endpoint sends a summary. In a summary, `steps`, `filters`,
- * `contentVariables`, `segmentId` and `createdAt` are empty. Read one sequence
- * with `find()` to get them.
+ * An automated series of emails, with its steps, its filters and its content
+ * variables. The sequence list returns a `SequenceSummary` for each item.
  */
 final readonly class Sequence
 {
     /**
      * @param  string  $status  One of `draft`, `live` or `paused`.
+     * @param  int  $completedCount  The contacts that finished the sequence.
+     * @param  int  $activeCount  The contacts that did not finish the sequence.
      * @param  list<SequenceStep>  $steps
      * @param  list<array<array-key, mixed>>  $filters
      * @param  array<string, string>  $contentVariables
@@ -26,10 +25,10 @@ final readonly class Sequence
         public int $id,
         public string $name,
         public string $status,
-        public int $stepsCount = 0,
-        public int $contactsCount = 0,
-        public int $completedCount = 0,
-        public int $activeCount = 0,
+        public int $stepsCount,
+        public int $contactsCount,
+        public int $completedCount,
+        public int $activeCount,
         public array $steps = [],
         public ?int $segmentId = null,
         public array $filters = [],
@@ -49,10 +48,10 @@ final readonly class Sequence
             id: $payload->int('id'),
             name: $payload->string('name'),
             status: $payload->string('status'),
-            stepsCount: $payload->nullableInt('steps_count') ?? 0,
-            contactsCount: $payload->nullableInt('contacts_count') ?? 0,
-            completedCount: $payload->nullableInt('completed_count') ?? 0,
-            activeCount: $payload->nullableInt('active_count') ?? 0,
+            stepsCount: $payload->int('steps_count'),
+            contactsCount: $payload->int('contacts_count'),
+            completedCount: $payload->int('completed_count'),
+            activeCount: $payload->int('active_count'),
             steps: array_map(SequenceStep::fromArray(...), $payload->objects('steps')),
             segmentId: $payload->nullableInt('segment_id'),
             filters: $payload->objects('filters'),

@@ -52,7 +52,9 @@ it('gives the field errors of a validation error', function () {
             'tags.0' => ['Too long.'],
         ])
             ->and($exception->first('email'))->toBe('The email field must be a valid email address.')
-            ->and($exception->first('name'))->toBeNull();
+            ->and($exception->first('name'))->toBeNull()
+            ->and($exception->has('email'))->toBeTrue()
+            ->and($exception->has('name'))->toBeFalse();
 
         return;
     }

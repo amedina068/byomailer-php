@@ -44,7 +44,7 @@ it('walks each paginated resource', function (Closure $all, array $item) {
 })->with([
     'contacts' => [fn ($client) => $client->contacts()->all(), contactPayload()],
     'newsletters' => [fn ($client) => $client->newsletters()->all(), newsletterPayload()],
-    'sequences' => [fn ($client) => $client->sequences()->all(), ['id' => 3, 'name' => 'Welcome', 'status' => 'live']],
+    'sequences' => [fn ($client) => $client->sequences()->all(), sequenceSummaryPayload()],
     'email templates' => [fn ($client) => $client->emailTemplates()->all(), ['id' => 6, 'name' => 'Brand', 'html_content' => '', 'is_default' => false]],
     'email identities' => [fn ($client) => $client->emailIdentities()->all(), identityPayload()],
     'email logs' => [fn ($client) => $client->emailLogs()->all(), ['id' => 1, 'provider' => 'ses', 'operation' => 'SendEmail', 'status' => 'success']],

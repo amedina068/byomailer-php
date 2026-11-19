@@ -6,6 +6,7 @@ use Byomailer\Data\Contact;
 use Byomailer\Data\MailList;
 use Byomailer\Data\Tag;
 use Byomailer\Data\Topic;
+use Byomailer\Exceptions\ValidationException;
 
 it('lists contacts with the filters', function () {
     $history = [];
@@ -130,6 +131,31 @@ it('unsubscribes a contact', function () {
     expect(sent($history[0]['request']))->toBe('POST /api/v1/contacts/42/unsubscribe')
         ->and($contact->isSubscribed())->toBeFalse();
 });
+
+it('subscribes a contact again', function () {
+    $history = [];
+
+    $contact = byomailer([json(['data' => contactPayload()])], $history)->contacts()->subscribe(42);
+
+    expect(sent($history[0]['request']))->toBe('POST /api/v1/contacts/42/subscribe')
+        ->and($contact->isSubscribed())->toBeTrue();
+});
+
+it('tells why the instance refused to subscribe a contact', function (string $field, string $message) {
+    try {
+        byomailer([json(['message' => $message, 'errors' => [$field => [$message]]], 422)])->contacts()->subscribe(42);
+    } catch (ValidationException $exception) {
+        expect($exception->has($field))->toBeTrue()
+            ->and($exception->first($field))->toBe($message);
+
+        return;
+    }
+
+    test()->fail('No exception was thrown.');
+})->with([
+    'unsubscribed through an email link' => ['contact', 'The contact unsubscribed through an email link. Only the contact can subscribe again.'],
+    'blacklisted address' => ['email', 'This email address has been blacklisted.'],
+]);
 
 it('removes a contact from a list and returns the contact', function () {
     $history = [];

@@ -83,6 +83,10 @@ final readonly class Contacts extends Resource
      * instance updates it and adds it to the list. Read `wasRecentlyCreated`
      * on the result to know which one occurred.
      *
+     * If an admin or the API unsubscribed the contact, the instance subscribes
+     * the contact again. An unsubscribe through an email link stays. If the
+     * list has opt-in, only a contact that is new on the list gets the opt-in email.
+     *
      * @param  list<string>  $tags  Tag names to add. The instance creates a tag that does not exist.
      * @param  array<string, mixed>  $attributes  Custom attributes, for example `['company' => 'Acme']`.
      */
@@ -108,6 +112,9 @@ final readonly class Contacts extends Resource
     /**
      * Change a contact. A field that you do not give keeps its value. Give an
      * empty string as the name to remove the name.
+     *
+     * An update never changes the subscription. To subscribe a contact again,
+     * use `subscribe()` or `addToList()`.
      *
      * @param  list<string>  $tags  Tag names to add.
      * @param  list<string>  $removeTags  Tag names to remove.
@@ -141,6 +148,22 @@ final readonly class Contacts extends Resource
     {
         return Contact::fromArray(
             $this->transport->post("contacts/{$contactId}/unsubscribe", idempotent: true)->data()
+        );
+    }
+
+    /**
+     * Subscribe a contact again after an admin or the API unsubscribed it.
+     * A subscribed contact does not change.
+     *
+     * In two cases, the instance refuses the request with a
+     * `ValidationException`. If the contact unsubscribed through an email
+     * link, the error is on the field `contact`. If the address is
+     * blacklisted, the error is on the field `email`.
+     */
+    public function subscribe(int $contactId): Contact
+    {
+        return Contact::fromArray(
+            $this->transport->post("contacts/{$contactId}/subscribe", idempotent: true)->data()
         );
     }
 

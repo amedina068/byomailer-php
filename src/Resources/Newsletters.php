@@ -122,8 +122,9 @@ final readonly class Newsletters extends Resource
 
     /**
      * Choose the winner of an A/B test. The newsletter must have the
-     * `ab_testing` status. The instance then sends the winner to the other
-     * contacts.
+     * `ab_testing` status. Each half of the audience already got one variant,
+     * so the instance sends no more email. The newsletter gets the `sent`
+     * status, and the instance sends the `newsletter.sent` webhook event one time.
      *
      * @param  string  $variant  `a` or `b`.
      */

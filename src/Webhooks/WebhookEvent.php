@@ -22,6 +22,10 @@ final readonly class WebhookEvent
 
     public const CONTACT_RESUBSCRIBED = 'contact.resubscribed';
 
+    /**
+     * A newsletter was sent. For an A/B newsletter, the instance sends this
+     * event one time, when a caller chooses the winner.
+     */
     public const NEWSLETTER_SENT = 'newsletter.sent';
 
     public const SEQUENCE_STEP_SENT = 'sequence_step.sent';

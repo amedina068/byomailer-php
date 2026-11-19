@@ -2,36 +2,70 @@
 
 declare(strict_types=1);
 
+use Byomailer\Data\Sequence;
+use Byomailer\Data\SequenceSummary;
+use Byomailer\Enums\SequenceStatus;
 use GuzzleHttp\Psr7\Response;
 
 it('lists sequence summaries', function () {
     $history = [];
 
-    $page = byomailer([json(page([[
-        'id' => 3, 'name' => 'Welcome', 'status' => 'live', 'steps_count' => 4,
-        'contacts_count' => 20, 'completed_count' => 5, 'active_count' => 15, 'project_ids' => [1],
-    ]]))], $history)->sequences()->list(status: 'live', search: 'Wel', project: 1);
+    $page = byomailer([json(page([sequenceSummaryPayload()]))], $history)
+        ->sequences()->list(status: SequenceStatus::Live, search: 'Wel', project: 1);
 
     $sequence = $page->first();
 
     expect(sent($history[0]['request']))->toBe('GET /api/v1/sequences?status=live&search=Wel&project=1')
+        ->and($sequence)->toBeInstanceOf(SequenceSummary::class)
         ->and($sequence?->isLive())->toBeTrue()
         ->and($sequence?->stepsCount)->toBe(4)
+        ->and($sequence?->contactsCount)->toBe(20)
+        ->and($sequence?->completedCount)->toBe(5)
         ->and($sequence?->activeCount)->toBe(15)
-        ->and($sequence?->steps)->toBe([])
-        ->and($sequence?->createdAt)->toBeNull();
+        ->and($sequence?->projectIds)->toBe([1]);
 });
 
-it('reads a sequence with its steps', function () {
+it('filters the list by each sequence status', function (SequenceStatus $status, string $query) {
+    $history = [];
+
+    byomailer([json(page([]))], $history)->sequences()->list(status: $status);
+
+    expect(sent($history[0]['request']))->toBe("GET /api/v1/sequences?status={$query}");
+})->with([
+    [SequenceStatus::Draft, 'draft'],
+    [SequenceStatus::Live, 'live'],
+    [SequenceStatus::Paused, 'paused'],
+]);
+
+it('keeps the status filter on each page', function () {
+    $history = [];
+
+    iterator_to_array(byomailer([
+        json(page([sequenceSummaryPayload()], next: 'c2')),
+        json(page([sequenceSummaryPayload()])),
+    ], $history)->sequences()->all(status: SequenceStatus::Paused));
+
+    expect(sent($history[1]['request']))->toBe('GET /api/v1/sequences?status=paused&cursor=c2');
+});
+
+it('reads a sequence with its steps, filters and content variables', function () {
+    $filters = [['category' => 'lists', 'mode' => 'any', 'values' => [3]]];
+
     $sequence = byomailer([json(['data' => [
         'id' => 3, 'name' => 'Welcome', 'status' => 'paused', 'contacts_count' => 20, 'completed_count' => 5,
         'active_count' => 15, 'steps_count' => 1, 'steps' => [stepPayload()], 'segment_id' => null,
-        'filters' => [], 'content_variables' => ['first_name' => 'friend'], 'created_at' => '2026-11-01T10:00:00.000000Z',
+        'filters' => $filters, 'content_variables' => ['first_name' => 'friend'], 'created_at' => '2026-11-01T10:00:00.000000Z',
         'project_ids' => [],
     ]])])->sequences()->find(3);
 
-    expect($sequence->steps[0]->subject())->toBe('Welcome')
+    expect($sequence)->toBeInstanceOf(Sequence::class)
+        ->and($sequence->isLive())->toBeFalse()
+        ->and($sequence->steps[0]->subject())->toBe('Welcome')
+        ->and($sequence->filters)->toBe($filters)
         ->and($sequence->contentVariables)->toBe(['first_name' => 'friend'])
+        ->and($sequence->completedCount)->toBe(5)
+        ->and($sequence->activeCount)->toBe(15)
+        ->and($sequence->createdAt?->format('Y-m-d'))->toBe('2026-11-01')
         ->and($sequence->projectIds)->toBe([]);
 });
 
@@ -103,10 +137,18 @@ it('exports the mails of a step as raw CSV text', function () {
     $result = byomailer([new Response(200, ['Content-Type' => 'text/csv; charset=UTF-8'], $csv)], $history)
         ->sequences()->exportStepMails(3, 11, [
             'status' => 'sent',
-            'current_only' => true,
             'sent_after' => new DateTimeImmutable('2026-11-01T00:00:00+00:00'),
         ]);
 
     expect($result)->toBe($csv)
-        ->and(sent($history[0]['request']))->toBe('GET /api/v1/sequences/3/steps/11/contact-mails/export?status=sent&current_only=1&sent_after=2026-11-01T00:00:00+00:00');
+        ->and(sent($history[0]['request']))->toBe('GET /api/v1/sequences/3/steps/11/contact-mails/export?status=sent&sent_after=2026-11-01T00:00:00+00:00');
+});
+
+it('does not send the deprecated current_only filter', function () {
+    $history = [];
+
+    byomailer([new Response(200, ['Content-Type' => 'text/csv'], "Email\n")], $history)
+        ->sequences()->exportStepMails(3, 11, ['status' => 'sent', 'current_only' => true]);
+
+    expect(sent($history[0]['request']))->toBe('GET /api/v1/sequences/3/steps/11/contact-mails/export?status=sent');
 });

@@ -102,15 +102,33 @@ $contact = $byomailer->contacts()->find(42);
 $contact = $byomailer->contacts()->addToList(3, 'ana@example.com', name: 'Ana');
 $contact = $byomailer->contacts()->update(42, name: 'Ana Pérez', removeTags: ['lead'], attributes: ['plan' => 'pro']);
 $contact = $byomailer->contacts()->unsubscribe(42);
+$contact = $byomailer->contacts()->subscribe(42);
 $contact = $byomailer->contacts()->removeFromList(3, 42);
 ```
 
 - `list()` leaves out unsubscribed contacts. Give `includeUnsubscribed: true` to include them.
 - `addToList()` creates the contact, or updates the contact with the same email. `$contact->wasRecentlyCreated` is true for a new contact.
+- If an admin or the API unsubscribed the contact, `addToList()` subscribes the contact again. An unsubscribe through an email link stays.
+- If the list has opt-in, only a contact that is new on the list gets the opt-in email. The contact gets newsletters and sequence emails through this list after the confirmation.
 - `attributes` are the custom attributes of the contact. The SDK sends them at the top level of the body, as the API expects. The names `email`, `name`, `tags` and `remove_tags` are not custom attributes, and the SDK refuses them.
-- `update()` changes only the fields that you give. To remove the name, give an empty string.
+- `update()` changes only the fields that you give. To remove the name, give an empty string. The SDK sends a `PATCH` request.
+- `update()` never changes the subscription. To subscribe a contact again, use `subscribe()` or `addToList()`.
 - `unsubscribe()` unsubscribes the contact from all email. The contact stays on its lists.
+- `subscribe()` subscribes the contact again after an admin or the API unsubscribed it. A subscribed contact does not change.
 - `removeFromList()` returns the contact without the list.
+
+The instance refuses `subscribe()` in two cases. Each case gives a `ValidationException` with the error on one field:
+
+```php
+use Byomailer\Exceptions\ValidationException;
+
+try {
+    $byomailer->contacts()->subscribe(42);
+} catch (ValidationException $exception) {
+    $exception->has('contact'); // The contact unsubscribed through an email link. Only the contact can subscribe again.
+    $exception->has('email');   // The email address is blacklisted.
+}
+```
 
 ### Lists
 
@@ -171,13 +189,15 @@ $variables = $byomailer->newsletters()->replaceVariables(7, ['first_name' => 'fr
 - `update()` changes only a draft or a scheduled newsletter. `delete()` deletes only a draft.
 - `list()` does not include the HTML and the text content. Use `find()` to get them.
 - `sendTest()` sends the newsletter to the email address of the token user, and returns this address.
-- `chooseWinner()` needs a newsletter with the `ab_testing` status.
+- `chooseWinner()` needs a newsletter with the `ab_testing` status. Each half of the audience already got one variant, so the instance sends no more email. The newsletter gets the `sent` status.
 - `replaceVariables()` replaces all the saved defaults. An empty array removes them.
 
 ### Sequences
 
 ```php
-$page = $byomailer->sequences()->list(status: 'live');
+use Byomailer\Enums\SequenceStatus;
+
+$page = $byomailer->sequences()->list(status: SequenceStatus::Live);
 $sequence = $byomailer->sequences()->find(3);
 $stats = $byomailer->sequences()->stats(3);
 $step = $byomailer->sequences()->step(3, 11);
@@ -185,11 +205,13 @@ $stats = $byomailer->sequences()->stepStats(3, 11);
 $step = $byomailer->sequences()->replaceStepFilters(3, 11, [['category' => 'tags', 'mode' => 'none', 'values' => [5]]]);
 $variables = $byomailer->sequences()->variables(3);
 $variables = $byomailer->sequences()->replaceVariables(3, ['first_name' => 'friend']);
-$csv = $byomailer->sequences()->exportStepMails(3, 11, ['status' => 'sent', 'current_only' => true]);
+$csv = $byomailer->sequences()->exportStepMails(3, 11, ['status' => 'sent']);
 ```
 
-- `list()` returns summaries with the counts. Use `find()` to get the steps, the filters and the content variables.
-- `exportStepMails()` returns the CSV text, with a header row.
+- `list()` returns a `SequenceSummary` for each sequence. A summary has the number of steps, contacts, completed contacts and active contacts.
+- `find()` returns a `Sequence`. It also has the steps, the filters and the content variables.
+- The status filter of `list()` is a `SequenceStatus`: `Draft`, `Live` or `Paused`.
+- `exportStepMails()` returns the CSV text, with a header row. The export always has the full history of the step. The SDK does not send the deprecated `current_only` filter.
 
 ### Blocks
 
@@ -319,6 +341,8 @@ if ($event->is(WebhookEvent::CONTACT_SUBSCRIBED)) {
 
 The events are `contact.subscribed`, `contact.unsubscribed`, `contact.resubscribed`, `newsletter.sent`, `sequence_step.sent`, `sequence.completed` and `webhook.test`. Each payload has `event` and `occurred_at`.
 
+For an A/B newsletter, the instance sends `newsletter.sent` one time, when a caller chooses the winner.
+
 ## Errors
 
 Each exception extends `Byomailer\Exceptions\ByomailerException`.
@@ -346,6 +370,7 @@ try {
 } catch (ValidationException $exception) {
     $exception->errors();        // ['email' => ['The email field must be a valid email address.']]
     $exception->first('email');  // 'The email field must be a valid email address.'
+    $exception->has('name');     // false
 } catch (RateLimitException $exception) {
     $exception->retryAfter();    // Seconds, from the Retry-After header.
 }
@@ -360,7 +385,7 @@ The SDK sends a request again after a 429, a 5xx or a connection error. The defa
 - The delay grows exponentially with jitter: 0.5 seconds, then 1 second, then 2 seconds, up to 8 seconds.
 - After a 429, the SDK waits for the time in the `Retry-After` header. If this time is more than 60 seconds, the SDK does not wait and throws the `RateLimitException`.
 - The SDK does not send a request that is not idempotent again after a 5xx or a timeout. The instance can have received the request. It sends this request again only after a 429, or after a connection error that occurred before the instance received the request.
-- `GET` and `DELETE` requests are idempotent. These writes are also idempotent, because they set values: the renames, the updates of contacts, topics, blocks and webhook endpoints, the replacement of filters and content variables, `unsubscribe()` and `countRecipients()`.
+- `GET` and `DELETE` requests are idempotent. These writes are also idempotent, because they set values: the renames, the updates of contacts, topics, blocks and webhook endpoints, the replacement of filters and content variables, `unsubscribe()`, `subscribe()` and `countRecipients()`.
 
 Three endpoints have a rate limit:
 

@@ -37,6 +37,14 @@ final class ValidationException extends ApiException
     }
 
     /**
+     * True when the instance refused this field.
+     */
+    public function has(string $field): bool
+    {
+        return isset($this->errors()[$field]);
+    }
+
+    /**
      * The first message for one field, or null when the field has no error.
      */
     public function first(string $field): ?string

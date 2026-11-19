@@ -72,6 +72,7 @@ it('retries an idempotent write after a server error', function (Closure $call, 
 })->with([
     'rename a list' => [fn ($client) => $client->lists()->rename(3, 'Buyers'), ['data' => listPayload()]],
     'update a contact' => [fn ($client) => $client->contacts()->update(42, name: 'Ana'), ['data' => contactPayload()]],
+    'subscribe a contact' => [fn ($client) => $client->contacts()->subscribe(42), ['data' => contactPayload()]],
     'count recipients' => [fn ($client) => $client->newsletters()->countRecipients(), ['count' => 1]],
     'replace step filters' => [fn ($client) => $client->sequences()->replaceStepFilters(3, 11, []), ['data' => stepPayload()]],
     'delete a tag' => [fn ($client) => $client->tags()->delete(5), []],

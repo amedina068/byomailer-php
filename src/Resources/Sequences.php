@@ -9,6 +9,8 @@ use Byomailer\Data\CursorPage;
 use Byomailer\Data\Sequence;
 use Byomailer\Data\SequenceStats;
 use Byomailer\Data\SequenceStep;
+use Byomailer\Data\SequenceSummary;
+use Byomailer\Enums\SequenceStatus;
 use DateTimeInterface;
 use Generator;
 
@@ -22,33 +24,32 @@ final readonly class Sequences extends Resource
      * One page of sequence summaries. Live sequences come first, then the
      * others by name.
      *
-     * @param  string|null  $status  One of `draft`, `live` or `paused`.
      * @param  string|null  $search  Matches part of the name.
      * @param  int|null  $project  Only sequences of this project.
-     * @return CursorPage<Sequence>
+     * @return CursorPage<SequenceSummary>
      */
     public function list(
-        ?string $status = null,
+        ?SequenceStatus $status = null,
         ?string $search = null,
         ?int $project = null,
         ?int $perPage = null,
         ?string $cursor = null,
     ): CursorPage {
         $body = $this->transport->get('sequences', self::filled([
-            'status' => $status,
+            'status' => $status?->value,
             'search' => $search,
             'project' => $project,
             'per_page' => $perPage,
             'cursor' => $cursor,
         ]))->json();
 
-        return CursorPage::fromBody($body, Sequence::fromArray(...));
+        return CursorPage::fromBody($body, SequenceSummary::fromArray(...));
     }
 
     /**
-     * @return Generator<int, Sequence>
+     * @return Generator<int, SequenceSummary>
      */
-    public function all(?string $status = null, ?string $search = null, ?int $project = null, ?int $perPage = null): Generator
+    public function all(?SequenceStatus $status = null, ?string $search = null, ?int $project = null, ?int $perPage = null): Generator
     {
         return CursorPage::walk(fn (?string $cursor): CursorPage => $this->list($status, $search, $project, $perPage, $cursor));
     }
@@ -117,12 +118,18 @@ final readonly class Sequences extends Resource
     }
 
     /**
-     * The mails of one step as CSV text, with a header row.
+     * The mails of one step as CSV text, with a header row. The export always
+     * has the full history of the step.
      *
-     * @param  array<string, string|int|bool|DateTimeInterface>  $filters  The query filters: `contact_id`, `status`, `filter`, `search`, `sent_after`, `sent_before`, `sort`, `direction` and `current_only`.
+     * The SDK does not send `current_only`. The instance ignores this
+     * deprecated filter.
+     *
+     * @param  array<string, string|int|bool|DateTimeInterface>  $filters  The query filters: `contact_id`, `status`, `filter`, `search`, `sent_after`, `sent_before`, `sort` and `direction`.
      */
     public function exportStepMails(int $sequenceId, int $stepId, array $filters = []): string
     {
+        unset($filters['current_only']);
+
         $query = array_map(static fn (mixed $value): mixed => match (true) {
             $value instanceof DateTimeInterface => $value->format(DateTimeInterface::ATOM),
             is_bool($value) => (int) $value,
