@@ -31,7 +31,7 @@ use SensitiveParameter;
  *
  *     $byomailer = new Byomailer('https://mail.example.com', $token);
  *
- *     $contact = $byomailer->contacts()->addToList(3, 'ana@example.com', name: 'Ana');
+ *     $contact = $byomailer->contacts()->add(3, 'ana@example.com', name: 'Ana');
  */
 class Byomailer
 {

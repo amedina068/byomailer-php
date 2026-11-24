@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+The same behavior as the JS, Python and Ruby SDKs.
+
+### Added
+
+- The MIT license: a `LICENSE` file and the `license` field in `composer.json`.
+- `WebhookVerificationException::invalidTimestamp()`, for a timestamp header that is missing or is not a Unix time.
+
+### Changed
+
+- **Breaking:** `contacts()->addToList()` is now `contacts()->add()`, the same name as in the other SDKs.
+- **Breaking:** `newsletters()->chooseWinner()` is now `newsletters()->pickWinner()`, the same name as in the other SDKs.
+- **Breaking:** a missing or malformed timestamp header now gives the reason `VerificationFailure::Timestamp`. Before, it gave `VerificationFailure::Signature`.
+- The rule for a connection error before the send did not change: the SDK retries each request after a DNS failure, a refused connection or a connect timeout. The 12 SDKs of the contract now use this rule.
+- `Webhook::verify()` changes the signature header to lowercase before the compare. A body that is a JSON list now gives `VerificationFailure::Payload`.
+- An empty `X-Byomailer-Delivery` header gives a null `deliveryId`.
+- The README gives the install command with `:dev-main`, the idempotent list and the MIT license.
+
 ## [0.2.0] - Unreleased
 
 ### Added

@@ -98,7 +98,7 @@ it('chooses the A/B winner', function () {
     $history = [];
 
     $newsletter = byomailer([json(['data' => newsletterPayload(['status' => 'sent', 'ab_test_enabled' => true, 'ab_test_winner_variant' => 'b'])])], $history)
-        ->newsletters()->chooseWinner(7, 'b');
+        ->newsletters()->pickWinner(7, 'b');
 
     expect(sent($history[0]['request']))->toBe('POST /api/v1/newsletters/7/ab-winner')
         ->and(body($history[0]['request']))->toBe(['winner_variant' => 'b'])

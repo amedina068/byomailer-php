@@ -35,10 +35,10 @@ The package is not on Packagist yet. Add the GitHub repository to the `composer.
 }
 ```
 
-Then install the package:
+Then install the `main` branch. The repository has no tag yet, so Composer needs `:dev-main`:
 
 ```bash
-composer require byomailer/byomailer-php
+composer require byomailer/byomailer-php:dev-main
 ```
 
 The repository is private. Composer needs a GitHub token with read access to it.
@@ -56,7 +56,7 @@ use Byomailer\Byomailer;
 
 $byomailer = new Byomailer('https://mail.example.com', getenv('BYOMAILER_TOKEN'));
 
-$contact = $byomailer->contacts()->addToList(
+$contact = $byomailer->contacts()->add(
     listId: 3,
     email: 'ana@example.com',
     name: 'Ana',
@@ -99,7 +99,7 @@ Each resource is a method of the client. Each method returns a value object, a l
 ```php
 $page = $byomailer->contacts()->list(lists: [3], tags: [5], search: 'ana', perPage: 50);
 $contact = $byomailer->contacts()->find(42);
-$contact = $byomailer->contacts()->addToList(3, 'ana@example.com', name: 'Ana');
+$contact = $byomailer->contacts()->add(3, 'ana@example.com', name: 'Ana');
 $contact = $byomailer->contacts()->update(42, name: 'Ana Pérez', removeTags: ['lead'], attributes: ['plan' => 'pro']);
 $contact = $byomailer->contacts()->unsubscribe(42);
 $contact = $byomailer->contacts()->subscribe(42);
@@ -107,12 +107,12 @@ $contact = $byomailer->contacts()->removeFromList(3, 42);
 ```
 
 - `list()` leaves out unsubscribed contacts. Give `includeUnsubscribed: true` to include them.
-- `addToList()` creates the contact, or updates the contact with the same email. `$contact->wasRecentlyCreated` is true for a new contact.
-- If an admin or the API unsubscribed the contact, `addToList()` subscribes the contact again. An unsubscribe through an email link stays.
+- `add()` creates the contact, or updates the contact with the same email. `$contact->wasRecentlyCreated` is true for a new contact.
+- If an admin or the API unsubscribed the contact, `add()` subscribes the contact again. An unsubscribe through an email link stays.
 - If the list has opt-in, only a contact that is new on the list gets the opt-in email. The contact gets newsletters and sequence emails through this list after the confirmation.
 - `attributes` are the custom attributes of the contact. The SDK sends them at the top level of the body, as the API expects. The names `email`, `name`, `tags` and `remove_tags` are not custom attributes, and the SDK refuses them.
 - `update()` changes only the fields that you give. To remove the name, give an empty string. The SDK sends a `PATCH` request.
-- `update()` never changes the subscription. To subscribe a contact again, use `subscribe()` or `addToList()`.
+- `update()` never changes the subscription. To subscribe a contact again, use `subscribe()` or `add()`.
 - `unsubscribe()` unsubscribes the contact from all email. The contact stays on its lists.
 - `subscribe()` subscribes the contact again after an admin or the API unsubscribed it. A subscribed contact does not change.
 - `removeFromList()` returns the contact without the list.
@@ -178,7 +178,7 @@ $byomailer->newsletters()->delete(7);
 
 $count = $byomailer->newsletters()->countRecipients([['category' => 'tags', 'mode' => 'any', 'values' => [5]]]);
 $address = $byomailer->newsletters()->sendTest(7);
-$newsletter = $byomailer->newsletters()->chooseWinner(7, 'b');
+$newsletter = $byomailer->newsletters()->pickWinner(7, 'b');
 
 $variables = $byomailer->newsletters()->variables(7);
 $variables = $byomailer->newsletters()->replaceVariables(7, ['first_name' => 'friend']);
@@ -189,7 +189,7 @@ $variables = $byomailer->newsletters()->replaceVariables(7, ['first_name' => 'fr
 - `update()` changes only a draft or a scheduled newsletter. `delete()` deletes only a draft.
 - `list()` does not include the HTML and the text content. Use `find()` to get them.
 - `sendTest()` sends the newsletter to the email address of the token user, and returns this address.
-- `chooseWinner()` needs a newsletter with the `ab_testing` status. Each half of the audience already got one variant, so the instance sends no more email. The newsletter gets the `sent` status.
+- `pickWinner()` needs a newsletter with the `ab_testing` status. Each half of the audience already got one variant, so the instance sends no more email. The newsletter gets the `sent` status.
 - `replaceVariables()` replaces all the saved defaults. An empty array removes them.
 
 ### Sequences
@@ -333,15 +333,25 @@ if ($event->is(WebhookEvent::CONTACT_SUBSCRIBED)) {
 
 - Give the raw request body. Do not decode the JSON and encode it again. A new encoding gives other bytes, and the signature check fails.
 - `verify()` returns a `WebhookEvent`. It has the event `type`, the decoded `payload`, the `deliveryId`, the signing `timestamp` and the `occurredAt` date.
-- The SDK compares the signature in constant time.
+- `deliveryId` is the `X-Byomailer-Delivery` header. If the header is missing or empty, the verification passes and `deliveryId` is null. An older instance does not send it.
+- The SDK changes the signature header to lowercase, then compares it in constant time.
 - The SDK refuses a delivery that the instance signed more than 300 seconds before or after the current time. To change this tolerance, give `tolerance` to the constructor.
-- `$exception->reason` tells why the SDK refused the delivery: `VerificationFailure::Signature`, `VerificationFailure::Timestamp` or `VerificationFailure::Payload`.
+- `$exception->reason` tells why the SDK refused the delivery:
+
+| Reason | Cause |
+|---|---|
+| `VerificationFailure::Signature` | The signature header is missing, or the signature does not match the body. |
+| `VerificationFailure::Timestamp` | The timestamp header is missing, is not a Unix time, or is outside the tolerance. |
+| `VerificationFailure::Payload` | The signature is valid, but the body is not a JSON object. |
+
+The JS, Python and Ruby SDKs give the same fields and the same reasons. The checks run in this order: the signature header, the timestamp header, the signature, the tolerance and the body.
+
 - The instance can add event types. The SDK accepts each event type. Ignore the types that you do not use.
 - Use `deliveryId` to ignore a delivery that you received before. The instance sends a delivery again after a failure.
 
 The events are `contact.subscribed`, `contact.unsubscribed`, `contact.resubscribed`, `newsletter.sent`, `sequence_step.sent`, `sequence.completed` and `webhook.test`. Each payload has `event` and `occurred_at`.
 
-For an A/B newsletter, the instance sends `newsletter.sent` one time, when a caller chooses the winner.
+For an A/B newsletter, the instance sends `newsletter.sent` one time, when a caller picks the winner.
 
 ## Errors
 
@@ -366,7 +376,7 @@ use Byomailer\Exceptions\RateLimitException;
 use Byomailer\Exceptions\ValidationException;
 
 try {
-    $byomailer->contacts()->addToList(3, 'not-an-email');
+    $byomailer->contacts()->add(3, 'not-an-email');
 } catch (ValidationException $exception) {
     $exception->errors();        // ['email' => ['The email field must be a valid email address.']]
     $exception->first('email');  // 'The email field must be a valid email address.'
@@ -380,12 +390,27 @@ Each `ApiException` has the HTTP `status`, the `response` and the decoded `body(
 
 ## Retries
 
-The SDK sends a request again after a 429, a 5xx or a connection error. The default is 2 retries.
+The SDK sends a request again after a 429, a 5xx, a connection error or a timeout. The default is 2 retries. The timeout of one attempt is 30 seconds. The JS, Python and Ruby SDKs use the same values and the same rule.
 
-- The delay grows exponentially with jitter: 0.5 seconds, then 1 second, then 2 seconds, up to 8 seconds.
-- After a 429, the SDK waits for the time in the `Retry-After` header. If this time is more than 60 seconds, the SDK does not wait and throws the `RateLimitException`.
-- The SDK does not send a request that is not idempotent again after a 5xx or a timeout. The instance can have received the request. It sends this request again only after a 429, or after a connection error that occurred before the instance received the request.
-- `GET` and `DELETE` requests are idempotent. These writes are also idempotent, because they set values: the renames, the updates of contacts, topics, blocks and webhook endpoints, the replacement of filters and content variables, `unsubscribe()`, `subscribe()` and `countRecipients()`.
+- The delay grows exponentially with jitter: 0.5 seconds, then 1 second, then 2 seconds, up to 8 seconds. Half of each delay is random.
+- If the response has a `Retry-After` header, the SDK waits for that time. If this time is more than 60 seconds, the SDK does not wait and throws the exception.
+- After a 429, the SDK sends each request again. A 429 means that the instance did not do the request.
+- After a connection error before the send, the SDK sends each request again, also a write that is not idempotent. These errors are a DNS failure, a refused connection and a connect timeout. The instance did not get the request.
+- After a 5xx, a read timeout or a reset after the send, the SDK sends only an idempotent request again. The instance can have done the request.
+
+These requests are idempotent:
+
+- Each `GET` and each `DELETE`.
+- `newsletters()->countRecipients()`, because it only reads.
+- `contacts()->update()`, `contacts()->unsubscribe()` and `contacts()->subscribe()`.
+- `lists()->rename()`, `tags()->rename()`, `projects()->rename()`, `topics()->update()`, `blocks()->update()` and `webhookEndpoints()->update()`.
+- `newsletters()->replaceVariables()`, `sequences()->replaceVariables()` and `sequences()->replaceStepFilters()`.
+
+The other writes are not idempotent. Examples:
+
+- `contacts()->add()`: a repeat changes `wasRecentlyCreated` from true to false.
+- `newsletters()->update()`: the `live` status can start the send. A repeat then gets a 422.
+- `newsletters()->sendTest()`, `newsletters()->pickWinner()`, `webhookEndpoints()->rotateSecret()`, `webhookEndpoints()->sendTest()` and each `create()`.
 
 Three endpoints have a rate limit:
 
@@ -438,7 +463,7 @@ php artisan vendor:publish --tag=byomailer-config
 use Byomailer\Byomailer;
 use Byomailer\Laravel\Facades\Byomailer as ByomailerFacade;
 
-$contact = ByomailerFacade::contacts()->addToList(3, $user->email, name: $user->name);
+$contact = ByomailerFacade::contacts()->add(3, $user->email, name: $user->name);
 
 public function __construct(private Byomailer $byomailer) {}
 ```
@@ -495,4 +520,4 @@ To report a security problem, read [SECURITY.md](SECURITY.md).
 
 ## License
 
-The owner has not chosen a license yet.
+MIT. Read [LICENSE](LICENSE).

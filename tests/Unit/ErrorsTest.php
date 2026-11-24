@@ -45,7 +45,7 @@ it('gives the field errors of a validation error', function () {
         byomailer([json([
             'message' => 'The email field must be a valid email address.',
             'errors' => ['email' => ['The email field must be a valid email address.'], 'tags.0' => ['Too long.']],
-        ], 422)])->contacts()->addToList(3, 'not-an-email');
+        ], 422)])->contacts()->add(3, 'not-an-email');
     } catch (ValidationException $exception) {
         expect($exception->errors())->toBe([
             'email' => ['The email field must be a valid email address.'],

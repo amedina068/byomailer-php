@@ -65,7 +65,7 @@ it('reads an empty attribute list as an empty map', function () {
 it('adds a new contact to a list with the attributes at the top level', function () {
     $history = [];
 
-    $contact = byomailer([json(['data' => contactPayload()], 201)], $history)->contacts()->addToList(
+    $contact = byomailer([json(['data' => contactPayload()], 201)], $history)->contacts()->add(
         3,
         'ana@example.com',
         name: 'Ana',
@@ -85,7 +85,7 @@ it('adds a new contact to a list with the attributes at the top level', function
 });
 
 it('tells when the contact existed before', function () {
-    $contact = byomailer([json(['data' => contactPayload()], 200)])->contacts()->addToList(3, 'ana@example.com');
+    $contact = byomailer([json(['data' => contactPayload()], 200)])->contacts()->add(3, 'ana@example.com');
 
     expect($contact->wasRecentlyCreated)->toBeFalse();
 });
@@ -93,13 +93,13 @@ it('tells when the contact existed before', function () {
 it('sends only the email when no other field is given', function () {
     $history = [];
 
-    byomailer([json(['data' => contactPayload()], 201)], $history)->contacts()->addToList(3, 'ana@example.com');
+    byomailer([json(['data' => contactPayload()], 201)], $history)->contacts()->add(3, 'ana@example.com');
 
     expect(body($history[0]['request']))->toBe(['email' => 'ana@example.com']);
 });
 
 it('refuses an attribute with the name of a contact field', function (string $name) {
-    byomailer()->contacts()->addToList(3, 'ana@example.com', attributes: [$name => 'x']);
+    byomailer()->contacts()->add(3, 'ana@example.com', attributes: [$name => 'x']);
 })->with(['email', 'name', 'tags', 'remove_tags'])->throws(InvalidArgumentException::class, 'not custom attributes');
 
 it('updates a contact with PATCH', function () {

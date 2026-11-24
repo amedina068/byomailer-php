@@ -90,7 +90,7 @@ final readonly class Contacts extends Resource
      * @param  list<string>  $tags  Tag names to add. The instance creates a tag that does not exist.
      * @param  array<string, mixed>  $attributes  Custom attributes, for example `['company' => 'Acme']`.
      */
-    public function addToList(
+    public function add(
         int $listId,
         string $email,
         ?string $name = null,
@@ -114,7 +114,7 @@ final readonly class Contacts extends Resource
      * empty string as the name to remove the name.
      *
      * An update never changes the subscription. To subscribe a contact again,
-     * use `subscribe()` or `addToList()`.
+     * use `subscribe()` or `add()`.
      *
      * @param  list<string>  $tags  Tag names to add.
      * @param  list<string>  $removeTags  Tag names to remove.

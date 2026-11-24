@@ -26,6 +26,14 @@ final class WebhookVerificationException extends ByomailerException
         );
     }
 
+    public static function invalidTimestamp(): self
+    {
+        return new self(
+            'The webhook timestamp header is missing or is not a Unix time.',
+            VerificationFailure::Timestamp,
+        );
+    }
+
     public static function timestampOutsideTolerance(int $tolerance): self
     {
         return new self(

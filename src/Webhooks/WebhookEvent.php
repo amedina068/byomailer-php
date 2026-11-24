@@ -24,7 +24,7 @@ final readonly class WebhookEvent
 
     /**
      * A newsletter was sent. For an A/B newsletter, the instance sends this
-     * event one time, when a caller chooses the winner.
+     * event one time, when a caller picks the winner.
      */
     public const NEWSLETTER_SENT = 'newsletter.sent';
 
@@ -38,7 +38,7 @@ final readonly class WebhookEvent
      * @param  string  $type  The event type, for example `contact.subscribed`.
      * @param  array<array-key, mixed>  $payload  The decoded JSON body.
      * @param  int  $timestamp  The Unix time when the instance signed the delivery.
-     * @param  string|null  $deliveryId  The UUID of the delivery. Use it to ignore a delivery that you received before.
+     * @param  string|null  $deliveryId  The UUID of the delivery. Use it to ignore a delivery that you received before. Null when the header is missing, because an older instance does not send it.
      */
     public function __construct(
         public string $type,

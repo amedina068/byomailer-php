@@ -44,6 +44,10 @@ final readonly class Webhook
      * Give the raw request body, byte for byte. Do not decode and encode the
      * JSON again, because a new encoding gives other bytes.
      *
+     * The checks run in the order of the other SDKs: the signature header,
+     * the timestamp header, the signature, the tolerance and the JSON body.
+     * The signature header can use any case.
+     *
      * @param  string  $payload  The raw request body.
      * @param  array<string, string|list<string|null>|null>  $headers  The request headers. The names ignore case.
      * @param  int|null  $now  The current Unix time. Tests give it. The default is the clock.
@@ -56,17 +60,26 @@ final readonly class Webhook
         $signature = self::header($headers, self::SIGNATURE_HEADER);
         $timestamp = self::header($headers, self::TIMESTAMP_HEADER);
 
-        if ($signature === null || $timestamp === null || ! hash_equals($this->sign($timestamp, $payload), $signature)) {
+        if ($signature === null) {
             throw WebhookVerificationException::invalidSignature();
         }
 
-        if (! ctype_digit($timestamp) || abs(($now ?? time()) - (int) $timestamp) > $this->tolerance) {
+        if ($timestamp === null || ! ctype_digit($timestamp)) {
+            throw WebhookVerificationException::invalidTimestamp();
+        }
+
+        if (! hash_equals($this->sign($timestamp, $payload), strtolower($signature))) {
+            throw WebhookVerificationException::invalidSignature();
+        }
+
+        if (abs(($now ?? time()) - (int) $timestamp) > $this->tolerance) {
             throw WebhookVerificationException::timestampOutsideTolerance($this->tolerance);
         }
 
         $data = json_decode($payload, true);
 
-        if (! is_array($data)) {
+        // A JSON object starts with "{". A JSON list also decodes to an array.
+        if (! is_array($data) || ! str_starts_with(ltrim($payload), '{')) {
             throw WebhookVerificationException::invalidPayload();
         }
 
@@ -74,7 +87,7 @@ final readonly class Webhook
             $data,
             (int) $timestamp,
             self::header($headers, self::EVENT_HEADER),
-            self::header($headers, self::DELIVERY_HEADER),
+            self::header($headers, self::DELIVERY_HEADER) ?: null,
         );
     }
 

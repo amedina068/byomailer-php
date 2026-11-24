@@ -15,7 +15,8 @@ enum VerificationFailure: string
     case Signature = 'signature';
 
     /**
-     * The delivery was signed outside the tolerance.
+     * The timestamp header is missing, is not a Unix time, or is outside the
+     * tolerance.
      */
     case Timestamp = 'timestamp';
 

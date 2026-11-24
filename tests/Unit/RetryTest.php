@@ -54,12 +54,13 @@ it('does not retry a POST that is not idempotent after a server error', function
     expect(fn () => $call($client))->toThrow(ServerException::class)
         ->and($history)->toHaveCount(1);
 })->with([
-    'add a contact' => [fn ($client) => $client->contacts()->addToList(3, 'ana@example.com')],
+    'add a contact' => [fn ($client) => $client->contacts()->add(3, 'ana@example.com')],
     'create a tag' => [fn ($client) => $client->tags()->create('vip')],
     'send a test email' => [fn ($client) => $client->newsletters()->sendTest(7)],
     'send a test delivery' => [fn ($client) => $client->webhookEndpoints()->sendTest(4)],
     'rotate a secret' => [fn ($client) => $client->webhookEndpoints()->rotateSecret(4)],
     'update a newsletter' => [fn ($client) => $client->newsletters()->update(7, ['title' => 'x'])],
+    'pick the winner' => [fn ($client) => $client->newsletters()->pickWinner(7, 'a')],
 ]);
 
 it('retries an idempotent write after a server error', function (Closure $call, array $response) {
@@ -73,6 +74,14 @@ it('retries an idempotent write after a server error', function (Closure $call, 
     'rename a list' => [fn ($client) => $client->lists()->rename(3, 'Buyers'), ['data' => listPayload()]],
     'update a contact' => [fn ($client) => $client->contacts()->update(42, name: 'Ana'), ['data' => contactPayload()]],
     'subscribe a contact' => [fn ($client) => $client->contacts()->subscribe(42), ['data' => contactPayload()]],
+    'unsubscribe a contact' => [fn ($client) => $client->contacts()->unsubscribe(42), ['data' => contactPayload()]],
+    'rename a tag' => [fn ($client) => $client->tags()->rename(5, 'vip'), ['data' => tagPayload()]],
+    'update a topic' => [fn ($client) => $client->topics()->update(3, 8, 'Offers'), ['data' => topicPayload()]],
+    'update a block' => [fn ($client) => $client->blocks()->update(2, 'footer', '<p>Bye</p>'), ['data' => ['id' => 2, 'uuid' => 'a1b2c3d4-0000-4000-8000-000000000001', 'name' => 'footer', 'html_content' => '<p>Bye</p>', 'created_at' => null, 'updated_at' => null]]],
+    'rename a project' => [fn ($client) => $client->projects()->rename(4, 'Shop'), ['data' => ['id' => 4, 'uuid' => 'a1b2c3d4-0000-4000-8000-000000000010', 'name' => 'Shop', 'created_at' => '2026-11-01T10:00:00.000000Z']]],
+    'replace newsletter variables' => [fn ($client) => $client->newsletters()->replaceVariables(7, []), ['data' => ['content_variables' => [], 'detected_variables' => []]]],
+    'replace sequence variables' => [fn ($client) => $client->sequences()->replaceVariables(3, []), ['data' => ['content_variables' => [], 'detected_variables' => []]]],
+    'update a webhook endpoint' => [fn ($client) => $client->webhookEndpoints()->update(4, active: true), ['data' => endpointPayload()]],
     'count recipients' => [fn ($client) => $client->newsletters()->countRecipients(), ['count' => 1]],
     'replace step filters' => [fn ($client) => $client->sequences()->replaceStepFilters(3, 11, []), ['data' => stepPayload()]],
     'delete a tag' => [fn ($client) => $client->tags()->delete(5), []],
@@ -101,11 +110,33 @@ it('does not wait when Retry-After is longer than the limit', function () {
         ->and($delays)->toBe([]);
 });
 
-it('retries a POST after a connection error before the request was sent', function () {
+it('retries a POST after a connection error before the send', function (string $message) {
     $history = [];
-    $client = byomailer([connectionRefused(), json(['data' => tagPayload()], 201)], $history, noSleep(2));
+    $error = new ConnectException($message, new Request('POST', 'https://mail.example.com'));
+    $client = byomailer([$error, json(['data' => tagPayload()], 201)], $history, noSleep(2));
 
     expect($client->tags()->create('vip')->name)->toBe('vip')
+        ->and($history)->toHaveCount(2);
+})->with([
+    'a DNS failure' => ['cURL error 6: Could not resolve host: mail.example.com'],
+    'a refused connection' => ['cURL error 7: Failed to connect to mail.example.com port 443: Connection refused'],
+    'a connect timeout' => ['cURL error 28: Connection timed out after 10001 milliseconds'],
+]);
+
+it('does not retry a POST after a reset after the send', function () {
+    $history = [];
+    $error = new ConnectException('cURL error 56: Recv failure: Connection reset by peer', new Request('POST', 'https://mail.example.com'));
+    $client = byomailer([$error, json(['data' => tagPayload()], 201)], $history, noSleep(2));
+
+    expect(fn () => $client->tags()->create('vip'))->toThrow(ConnectionException::class)
+        ->and($history)->toHaveCount(1);
+});
+
+it('retries an idempotent POST after a refused connection', function () {
+    $history = [];
+    $client = byomailer([connectionRefused(), json(['count' => 12])], $history, noSleep(2));
+
+    expect($client->newsletters()->countRecipients())->toBe(12)
         ->and($history)->toHaveCount(2);
 });
 

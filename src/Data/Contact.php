@@ -17,7 +17,7 @@ final readonly class Contact
      * @param  list<MailList>  $lists
      * @param  list<Topic>  $topics  The topics that the contact is subscribed to.
      * @param  list<array{id: int, name: string, status: string}>  $sequences
-     * @param  bool  $wasRecentlyCreated  True when `addToList()` created the contact. False when the contact existed.
+     * @param  bool  $wasRecentlyCreated  True when `add()` created the contact. False when the contact existed.
      */
     public function __construct(
         public int $id,

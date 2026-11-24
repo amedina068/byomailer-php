@@ -128,7 +128,7 @@ final readonly class Newsletters extends Resource
      *
      * @param  string  $variant  `a` or `b`.
      */
-    public function chooseWinner(int $newsletterId, string $variant): Newsletter
+    public function pickWinner(int $newsletterId, string $variant): Newsletter
     {
         return Newsletter::fromArray(
             $this->transport->post("newsletters/{$newsletterId}/ab-winner", ['winner_variant' => $variant])->data()

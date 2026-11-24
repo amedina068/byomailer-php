@@ -18,9 +18,10 @@ use SensitiveParameter;
  * Sends requests to the API of one instance, with the token and the retry
  * policy.
  *
- * The SDK sends a request again after a 429, a 5xx or a connection error.
- * It sends a request that is not idempotent again only after a 429, or after
- * a connection error that occurred before the instance received the request.
+ * The SDK sends each request again after a 429, or after a connection error
+ * before the send (DNS, refused, connect timeout), because the instance did
+ * not get or did not do the request. It sends a request again after a 5xx,
+ * a read timeout or another connection error only when it is idempotent.
  *
  * @internal
  */
@@ -45,7 +46,7 @@ final readonly class Transport
 
     /**
      * @param  array<string, mixed>  $data
-     * @param  bool  $idempotent  True when a second identical request has no other effect.
+     * @param  bool  $idempotent  True when the operation is in the idempotent list of the contract.
      */
     public function post(string $path, array $data = [], bool $idempotent = false): Response
     {
@@ -54,7 +55,7 @@ final readonly class Transport
 
     /**
      * @param  array<string, mixed>  $data
-     * @param  bool  $idempotent  True when the request sets values and does not add to them.
+     * @param  bool  $idempotent  True when the operation is in the idempotent list of the contract.
      */
     public function patch(string $path, array $data, bool $idempotent = false): Response
     {
@@ -83,7 +84,7 @@ final readonly class Transport
             } catch (ClientExceptionInterface $exception) {
                 $error = ConnectionException::from($exception);
 
-                if ($this->retry->allows($attempts) && ($idempotent || ! $error->requestSent)) {
+                if (($idempotent || ! $error->requestSent) && $this->retry->allows($attempts)) {
                     $this->retry->sleep($this->retry->delay($attempts));
 
                     continue;

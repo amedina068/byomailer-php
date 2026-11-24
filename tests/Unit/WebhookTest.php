@@ -19,17 +19,19 @@ function vectors(): array
 }
 
 /**
+ * The headers of a vector. A null value leaves the header out.
+ *
  * @param  array<string, mixed>  $case
  * @return array<string, string>
  */
 function vectorHeaders(array $case): array
 {
-    return [
+    return array_filter([
         'X-Byomailer-Signature' => $case['signature'],
         'X-Byomailer-Timestamp' => $case['timestamp'],
         'X-Byomailer-Event' => 'contact.subscribed',
-        'X-Byomailer-Delivery' => '4c7e2a10-0000-4000-8000-000000000001',
-    ];
+        'X-Byomailer-Delivery' => $case['delivery'],
+    ], fn (?string $value) => $value !== null);
 }
 
 $secret = 'whsec_test0123456789abcdefghijklmnopqrstuvwxyz';
@@ -40,8 +42,12 @@ it('matches each shared test vector', function (array $case) {
     if ($case['valid']) {
         $event = $webhook->verify($case['body'], vectorHeaders($case), now: $case['now']);
 
-        expect($event->payload)->toBe(json_decode($case['body'], true))
-            ->and($event->timestamp)->toBe((int) $case['timestamp']);
+        $payload = json_decode($case['body'], true);
+
+        expect($event->type)->toBe($payload['event'])
+            ->and($event->payload)->toBe($payload)
+            ->and($event->timestamp)->toBe((int) $case['timestamp'])
+            ->and($event->deliveryId)->toBe($case['delivery_id']);
 
         return;
     }
@@ -65,7 +71,7 @@ it('returns the decoded event of a valid delivery', function () use ($secret) {
     expect($event)->toBeInstanceOf(WebhookEvent::class)
         ->and($event->type)->toBe(WebhookEvent::CONTACT_SUBSCRIBED)
         ->and($event->is('contact.subscribed'))->toBeTrue()
-        ->and($event->deliveryId)->toBe('4c7e2a10-0000-4000-8000-000000000001')
+        ->and($event->deliveryId)->toBe($case['delivery'])
         ->and($event->occurredAt?->format(DATE_ATOM))->toBe('2025-11-18T10:00:00+00:00')
         ->and($event->contact()['company'])->toBe('Café Ñandú')
         ->and($event->contact()['name'])->toBe('Ana Pérez 🎉')
@@ -94,6 +100,40 @@ it('accepts an event type that it does not know', function () use ($secret) {
     ], now: 1763460000);
 
     expect($event->type)->toBe('contact.deleted');
+});
+
+it('takes the type from the event header when the payload has no event', function () use ($secret) {
+    $body = '{"occurred_at":"2026-11-18T10:00:00+00:00"}';
+    $timestamp = '1763460000';
+
+    $event = (new Webhook($secret))->verify($body, [
+        'X-Byomailer-Event' => 'contact.deleted',
+        'X-Byomailer-Signature' => 'sha256='.hash_hmac('sha256', $timestamp.'.'.$body, $secret),
+        'X-Byomailer-Timestamp' => $timestamp,
+    ], now: 1763460000);
+
+    expect($event->type)->toBe('contact.deleted')
+        ->and($event->deliveryId)->toBeNull();
+});
+
+it('gives a null delivery ID for an empty delivery header', function () use ($secret) {
+    $case = vectors()[0];
+
+    $event = (new Webhook($secret))->verify($case['body'], [...vectorHeaders($case), 'X-Byomailer-Delivery' => ''], now: $case['now']);
+
+    expect($event->deliveryId)->toBeNull();
+});
+
+it('rejects a delivery with no timestamp header with the timestamp reason', function () use ($secret) {
+    try {
+        (new Webhook($secret))->verify('{}', ['X-Byomailer-Signature' => 'sha256='.str_repeat('0', 64)]);
+    } catch (WebhookVerificationException $exception) {
+        expect($exception->reason)->toBe(VerificationFailure::Timestamp);
+
+        return;
+    }
+
+    test()->fail('The delivery was accepted.');
 });
 
 it('rejects a delivery with no signature header', function () use ($secret) {

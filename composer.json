@@ -3,6 +3,7 @@
     "description": "PHP client and Laravel integration for a self-hosted BYOMailer instance.",
     "type": "library",
     "keywords": ["byomailer", "email", "newsletter", "amazon-ses", "webhooks", "laravel", "sdk"],
+    "license": "MIT",
     "homepage": "https://github.com/amedina068/byomailer-php",
     "require": {
         "php": "^8.2",

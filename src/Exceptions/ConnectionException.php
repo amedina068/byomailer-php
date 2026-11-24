@@ -12,7 +12,9 @@ use Throwable;
  * The SDK did not get a response from the instance.
  *
  * `$requestSent` is false only when the SDK is sure that the instance did not
- * receive the request, for example when DNS or the TCP connection failed.
+ * receive the request: a DNS failure, a refused connection or a connect
+ * timeout. Then the SDK retries each request, also a write that is not
+ * idempotent.
  */
 final class ConnectionException extends ByomailerException
 {
@@ -20,7 +22,7 @@ final class ConnectionException extends ByomailerException
      * Error texts that show that the request did not leave the client.
      * cURL error 5 and 6 are DNS failures. cURL error 7 is a refused connection.
      */
-    private const NOT_SENT_PATTERN = '/cURL error (5|6|7)\b|could ?n[o\']t resolve|connection refused|failed to connect|connection timed out/i';
+    private const NOT_SENT_PATTERN = '/cURL error (5|6|7)\b|could ?n[o\']t resolve|resolving timed out|connection refused|failed to connect|connection timed out/i';
 
     public function __construct(string $message, public readonly bool $requestSent, ?Throwable $previous = null)
     {
