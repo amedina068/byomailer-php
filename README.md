@@ -1,5 +1,8 @@
 # BYOMailer PHP SDK
 
+[![CI](https://github.com/amedina068/byomailer-php/actions/workflows/ci.yml/badge.svg)](https://github.com/amedina068/byomailer-php/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A PHP client for a self-hosted BYOMailer instance. The package also has a Laravel integration.
 
 BYOMailer sends newsletters and email sequences through your own Amazon SES account. Each user runs an own instance, so the client needs the URL of your instance.
@@ -514,10 +517,22 @@ BYOMAILER_TEST_URL=https://mail.example.com BYOMAILER_TEST_TOKEN=your-read-only-
 
 Use a read-only token for the integration tests.
 
-## Security
+## Related projects
 
-To report a security problem, read [SECURITY.md](SECURITY.md).
+- [BYOMailer](https://github.com/amedina068/byomailer): the self-hosted app that this SDK calls. It uses the AGPL-3.0.
+- [Documentation](https://byomailer.com/docs): the guides for the app and the SDKs. The source is in [byomailer-docs](https://github.com/amedina068/byomailer-docs).
+- [SDK overview](https://byomailer.com/docs/sdks/overview): the install steps and the features of each SDK.
+- SDKs for other languages: [TypeScript](https://github.com/amedina068/byomailer-js), [Python](https://github.com/amedina068/byomailer-python), [Ruby](https://github.com/amedina068/byomailer-ruby).
+
+## Community
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to set up the code and open a pull request.
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): the rules for issues, pull requests, and reviews.
+- [SECURITY.md](SECURITY.md): how to report a security problem in private.
+- [CHANGELOG.md](CHANGELOG.md): the changes in each version.
+
+Report a problem with the SDK in the issues of this repository. Report a problem with the app in the [BYOMailer issues](https://github.com/amedina068/byomailer/issues).
 
 ## License
 
-MIT. Read [LICENSE](LICENSE).
+This SDK is available under the [MIT License](LICENSE). You can use it in closed source code. The BYOMailer app uses the AGPL-3.0. That license does not cover this SDK.
