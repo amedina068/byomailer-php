@@ -41,7 +41,7 @@ Then install the `main` branch. The repository has no tag yet, so Composer needs
 composer require byomailer/byomailer-php:dev-main
 ```
 
-The repository is private. Composer needs a GitHub token with read access to it.
+The repository is public, so Composer needs no token.
 
 The SDK sends requests with any PSR-18 client. If your project has no PSR-18 client, install Guzzle:
 
