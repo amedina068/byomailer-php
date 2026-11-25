@@ -1,5 +1,8 @@
 # BYOMailer PHP SDK
 
+[![CI](https://github.com/amedina068/byomailer-php/actions/workflows/ci.yml/badge.svg)](https://github.com/amedina068/byomailer-php/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/amedina068/byomailer-php/badge)](https://scorecard.dev/viewer/?uri=github.com/amedina068/byomailer-php)
+
 A PHP client for a self-hosted BYOMailer instance. The package also has a Laravel integration.
 
 BYOMailer sends newsletters and email sequences through your own Amazon SES account. Each user runs an own instance, so the client needs the URL of your instance.

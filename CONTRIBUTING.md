@@ -57,6 +57,22 @@ Write documentation, comments and commit messages in Simple English (ASD-STE100)
 - Do not use contractions or semicolons.
 - Use "can", "will" and "must". Do not use "should", "may", "might", "could" or "would".
 
+## Pull request titles
+
+The title of each pull request must follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). The `PR title` check fails when the title does not follow the format. Examples:
+
+- `feat: add the subscribe method to contacts`
+- `fix(laravel): read the token from the config file`
+- `docs: add a retry example to the README`
+
+Use one of these types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore` or `revert`. The scope in parentheses is optional.
+
+GitHub makes the release notes from the titles of the merged pull requests. Write each title for a person who reads the release notes.
+
+## Triage
+
+Each issue form adds a type label and the `needs-triage` label to a new issue. The maintainer reads each new issue, removes `needs-triage` and sets the correct type label: `bug`, `enhancement`, `documentation` or `question`.
+
 ## Report a bug
 
 Open an issue with the bug template. To report a security problem, read [SECURITY.md](SECURITY.md). Do not open a public issue for a security problem.
