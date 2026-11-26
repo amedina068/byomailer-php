@@ -1,13 +1,14 @@
-# Prepares a release. This workflow runs only by hand.
+# Releases the package. This workflow runs only by hand.
 #
 # It does the checks, then creates a git tag and a GitHub release.
-# It does not publish the package to Packagist.
+# Packagist reads the new tag through its GitHub integration. The
+# repository has no Packagist secret, and this workflow does not call
+# Packagist.
 #
-# To publish to Packagist later:
-#   1. Choose a license and add it to the package.
-#   2. Add the repository to Packagist.
-#   3. Add the Packagist API token as the repository secret PACKAGIST_TOKEN.
-#   4. Remove the comment marks of the "Notify Packagist" step below.
+# Before the first release, submit the repository on Packagist one time:
+# https://packagist.org/packages/submit with the URL
+# https://github.com/amedina068/byomailer-php. After that, the Packagist
+# GitHub hook updates the package for each new tag.
 
 name: Release
 
@@ -28,7 +29,7 @@ jobs:
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Make sure that the version is valid
         run: |
@@ -37,7 +38,7 @@ jobs:
           grep -q "## \[${{ inputs.version }}\]" CHANGELOG.md
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: '8.3'
           coverage: none
@@ -47,8 +48,7 @@ jobs:
 
       - name: Run the checks
         run: |
-          # Not --strict: the package has no license field yet, and --strict fails on that warning.
-          composer validate --no-check-lock
+          composer validate --strict --no-check-lock
           vendor/bin/pint --test
           vendor/bin/phpstan analyse --memory-limit=1G --no-progress
           vendor/bin/pest
@@ -61,11 +61,3 @@ jobs:
             --title "v${{ inputs.version }}" \
             --notes "Read CHANGELOG.md for the changes in this version." \
             --target "${{ github.sha }}"
-
-      # - name: Notify Packagist
-      #   env:
-      #     PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
-      #   run: |
-      #     curl --fail -X POST -H 'Content-Type: application/json' \
-      #       "https://packagist.org/api/update-package?username=amedina068&apiToken=${PACKAGIST_TOKEN}" \
-      #       -d '{"repository":{"url":"https://github.com/amedina068/byomailer-php"}}'

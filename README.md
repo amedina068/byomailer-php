@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/amedina068/byomailer-php/actions/workflows/ci.yml/badge.svg)](https://github.com/amedina068/byomailer-php/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/amedina068/byomailer-php/badge)](https://scorecard.dev/viewer/?uri=github.com/amedina068/byomailer-php)
 
 A PHP client for a self-hosted BYOMailer instance. The package also has a Laravel integration.
 
