@@ -6,12 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-25
+
 The same behavior as the JS, Python and Ruby SDKs.
 
 ### Added
 
 - The MIT license: a `LICENSE` file and the `license` field in `composer.json`.
 - `WebhookVerificationException::invalidTimestamp()`, for a timestamp header that is missing or is not a Unix time.
+- `contacts()->subscribe()` subscribes a contact again after an admin or the API unsubscribed it.
+- `ValidationException::has()` tells if the instance refused one field. Use it to read why `subscribe()` failed: `contact` or `email`.
+- `SequenceSummary`, the type of each item of `sequences()->list()` and `sequences()->all()`.
+- `Byomailer\Enums\SequenceStatus`, with the cases `Draft`, `Live` and `Paused`.
 
 ### Changed
 
@@ -22,18 +28,6 @@ The same behavior as the JS, Python and Ruby SDKs.
 - `Webhook::verify()` changes the signature header to lowercase before the compare. A body that is a JSON list now gives `VerificationFailure::Payload`.
 - An empty `X-Byomailer-Delivery` header gives a null `deliveryId`.
 - The README gives the install command with `:dev-main`, the idempotent list and the MIT license.
-
-## [0.2.0] - Unreleased
-
-### Added
-
-- `contacts()->subscribe()` subscribes a contact again after an admin or the API unsubscribed it.
-- `ValidationException::has()` tells if the instance refused one field. Use it to read why `subscribe()` failed: `contact` or `email`.
-- `SequenceSummary`, the type of each item of `sequences()->list()` and `sequences()->all()`.
-- `Byomailer\Enums\SequenceStatus`, with the cases `Draft`, `Live` and `Paused`.
-
-### Changed
-
 - `sequences()->list()` and `sequences()->all()` return `SequenceSummary` items in place of `Sequence` items.
 - The `status` filter of `sequences()->list()` and `sequences()->all()` is a `SequenceStatus`, not a string.
 - `Sequence` and `SequenceSummary` need `steps_count`, `contacts_count`, `completed_count` and `active_count`. The instance now sends the real values.
@@ -45,7 +39,9 @@ The same behavior as the JS, Python and Ruby SDKs.
 
 - `sequences()->exportStepMails()` does not send the `current_only` filter. The instance deprecated this filter and ignores it.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - Not published
+
+Version 0.1.0 was not published. Release 0.2.0 contains these changes.
 
 ### Added
 

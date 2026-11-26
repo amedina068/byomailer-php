@@ -35,7 +35,7 @@ use SensitiveParameter;
  */
 class Byomailer
 {
-    public const VERSION = '0.1.0';
+    public const VERSION = '0.2.0';
 
     /**
      * The URL of the instance, with no trailing slash and no `/api` suffix.
