@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Report a security problem
+    url: https://github.com/amedina068/byomailer-php/security/advisories/new
+    about: Report a security problem in private. Do not open a public issue.
   - name: Question
     url: https://github.com/amedina068/byomailer/discussions/categories/q-a
     about: Ask a question about BYOMailer in the Q&A category of the discussions.
